@@ -1,4 +1,4 @@
-from models_loader import model_llm, tokenizer_llm, device, model_whisper
+from llm_loader import model_llm, tokenizer_llm, device, model_whisper
 from http import HTTPStatus
 import torch
 import whisper
