@@ -1,0 +1,26 @@
+# Use uma imagem base Python com suporte a GPU se você tiver uma (ex: nvidia/cuda)
+# Para CPU apenas, python:3.9-slim-buster é suficiente.
+# Se você tem GPU, considere algo como: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+FROM python:3.9-bullseye
+
+RUN apt-get update && apt-get install -y ffmpeg libsndfile1 && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+RUN pip install --no-cache-dir flask openai-whisper
+
+# Se for usar GPU, a instalação do torch precisa ser específica:
+# RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# RUN pip install --no-cache-dir openai-whisper
+
+# Define o diretório de trabalho
+WORKDIR /app
+
+# Copia o script da API
+COPY main.py .
+
+# Expõe a porta que a API usará
+EXPOSE 5001
+
+# Comando para iniciar o servidor Flask
+CMD ["python", "main.py"]

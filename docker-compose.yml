@@ -1,0 +1,95 @@
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: gistlydb
+      POSTGRES_USER: gistly
+      POSTGRES_PASSWORD: gistlyapi190305!
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./dotenv-files/.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: . # O contexto de build deve ser a raiz do seu projeto, não apenas ./backend
+      dockerfile: Dockerfile # O Dockerfile que você forneceu acima
+    command: >
+      sh -c "python /app/backend/manage.py migrate && \ # Adicionado migrate para garantir DB pronto
+             python /app/backend/manage.py runserver 0.0.0.0:8000 & \
+             cd /app/frontend && npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      # Mapeia as pastas 'backend' e 'frontend' para dentro de '/app' no container
+      # Isso permite que as alterações no código sejam refletidas automaticamente (hot-reloading)
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      # - .:/app # Uma alternativa mais abrangente se você quiser mapear toda a raiz do projeto
+    ports:
+      - "8000:8000" # Porta do Django
+      - "5173:5173" # Porta do Vite (padrão, ajuste se o seu mudar)
+    environment:
+      POSTGRES_DB: gistlydb
+      POSTGRES_USER: gistly
+      POSTGRES_PASSWORD: gistlyapi190305!
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      DJANGO_SETTINGS_MODULE: djangoapp.settings
+      DJANGO_SECRET_KEY: django-insecure-qxjdwozyid!g33!$^%&eqq-6o2v_5ba-0*e*dg=r2=6=^lc!&
+    env_file:
+      - ./dotenv-files/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      whisper_api:
+        condition: service_started
+
+  ollama:
+    image: ollama/ollama:latest
+    # Se você tiver GPU e o NVIDIA Container Toolkit instalado, adicione:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+    volumes:
+      - ollama_models:/root/.ollama # Persiste os modelos baixados
+    ports:
+      - "11434:11434" # Porta padrão da API do Ollama
+
+  whisper_api:
+    build:
+      context: ./whisper_api # O contexto de build é o diretório whisper_api
+      dockerfile: Dockerfile.whisper # Usa o Dockerfile específico para o Whisper
+    # Se você tiver GPU e o NVIDIA Container Toolkit instalado, adicione:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+    ports:
+      - "5001:5001" # Porta da API do Whisper
+    volumes:
+      # Opcional: Se quiser persistir modelos do Whisper baixados, crie um volume
+      # - whisper_models:/root/.cache/whisper
+      - ./whisper_api:/app # Monta o diretório da API para facilitar o desenvolvimento
+    environment:
+      # Se o modelo for muito grande, você pode definir variáveis para escolher o modelo
+      # WHISPER_MODEL: "medium"
+      # Ou passar como argumento no CMD do Dockerfile.whisper
+      FLASK_APP: main.py
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5001
+
+volumes:
+  pgdata:
+  ollama_models: # Novo volume para persistir os modelos do Ollama
+  # whisper_models: # Opcional: Novo volume para persistir os modelos do Whisper
