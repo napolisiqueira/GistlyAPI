@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 <body>
     <div class="container">
         <h1>GistlyAPI</h1>
@@ -93,4 +91,3 @@ ALLOWED_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "mp3", "wav"}
 </div>
 </body>
 </html>
->>>>>>> 3c53111bb6ca1a7b063fc6bd6f2ae5c8802114c0
